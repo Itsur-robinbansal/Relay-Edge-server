@@ -1,0 +1,96 @@
+Test cases:
+===========
+Cache size = 5, only 2 requests are cached. 
+Input file: 1.1.6-delayed.csv
+Output file: output5-request1000.txt
+Detailed log: out1-request1000.txt
+1. The decisions on packets are whether to forward, download+forward, buffer or pick from cache(hit). Make these decisions and all calculations manually on a spreadsheet (1.1.6-delayed-notes.xls). Run the program and open the output file (output5-request1000) and the detailed log.
+
+1a. Check whether these decisions are taken correctly for each request.
+1b. Check whether the values of the forward counter, buffer counter, number of hits are correct for each request.
+1c. Check whether each download that is initiated is cached at some point.
+1d. Check whether ExecutableID, SubmitTime, latency of each request and total latency are correct. Cross-check with the input and with the manual calculations.
+
+2. Increase the number of requests so that more than 5 items are cached. Create such entries in the input file.
+Input file: 1.1.6-delayed-more-requests.csv
+Manual calculations: 1.1.6-delayed-more-requests-notes.xls
+Output file: output5-more-requests.txt
+Detailed log: out1-more-requests.txt
+Repeat test case 1
+Check whether entries are cached and evicted correctly.
+
+3. Add a request s such that it is cached once and evicted once. After eviction it is requested 3 times again. For example, the new requests are s1, s2 and s3. The
+timestamp of s1 is such that it is forwarded to the cloud for the first request, that of s2 is such that a download is initiated and that of s3 is such that it is a miss.
+3a. Check whether the entries in cache are correctly evicted and filled. 
+3b. Check whether the actions are correct. 
+
+4. The resource limits are exceeded and the cache limits are not exceeded.
+   data_rate_li = 30  # in Mbps Uplink bandwidth
+   data_rate_Mi = 40  # in Mbps ###Downlink bandwidth
+   C =5
+   MAX_CPU_LIMIT = 10
+   MAX_MEMORY_LIMIT = 10
+   MAX_DISK_LIMIT = 10
+   Input file: 1.1.6-resourcesC1.csv
+   Output file: output-logC1.txt
+   Detailed log: detailed-logC1.txt
+
+5. Currently, the cache limit exceeded and resource limit exceeded.
+   data_rate_li = 30  # in Mbps Uplink bandwidth
+   data_rate_Mi = 40  # in Mbps ###Downlink bandwidth
+   C =1 
+   MAX_CPU_LIMIT = 10
+   MAX_MEMORY_LIMIT = 10
+   MAX_DISK_LIMIT = 10
+   Input file: 1.1.6-resourcesC2.csv
+   Manual calculations: 1.1.6-resourcesC2.xls
+   Output file: output-logC2.txt
+   Detailed log: detailed-logC2.txt
+   
+6. The resource limits are not exceeded but the cache limits are exceeded.
+   Input file: 1.1.6-resourcesC3.csv
+   Output file: output-logC3.txt
+   Detailed log: detailed-logC3.txt
+   data_rate_li = 30  # in Mbps Uplink bandwidth
+   data_rate_Mi = 40  # in Mbps ###Downlink bandwidth
+   C =1 
+   MAX_CPU_LIMIT = 100
+   MAX_MEMORY_LIMIT = 100
+   MAX_DISK_LIMIT = 100
+
+7. The resource limits are not exceeded and the cache limits are also not exceeded.
+   Input file: 1.1.6-resourcesC4.csv
+   Output file: output-logC4.txt
+   Detailed log: detailed-logC4.txt
+   data_rate_li = 30  # in Mbps Uplink bandwidth
+   data_rate_Mi = 40  # in Mbps ###Downlink bandwidth
+   C =5 
+   MAX_CPU_LIMIT = 100
+   MAX_MEMORY_LIMIT = 100
+   MAX_DISK_LIMIT = 100
+   
+8. li>Mi (verified with other test cases)
+
+9. Evicting multiple entries to add an entry.
+   C=2.
+   data_rate_li = 30  
+   data_rate_Mi = 40 
+   Input file: 1.1.6-multipleentries.csv
+   Output file: output-logmultipleentries.txt
+   Detailed log: detailed-multipleentries.txt
+
+10.Request s arrives 6 times. First time s is forwarded. Second time downloaded and forwarded. Then evicted. Fourth time requested again and forwarded. Fifth time downloaded and forwarded.Then   
+   evicted. Then again requested at a later timestamp.
+   C=1.
+   data_rate_li = 30  
+   data_rate_Mi = 40 
+   Input file: 1.1.6-more-requeststwiceevicted.csv
+   Output file: output-logrequeststwiceevicted.txt
+   Detailed log: detailed-requeststwiceevicted.txt
+   
+11. One entry evicted, the cache has space it can directly bring the next entry into cache.(verified with other test cases)
+
+
+
+
+
