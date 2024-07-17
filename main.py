@@ -12,9 +12,11 @@ from TestingLord import Landlord
 
 data_rate_li = 30  # in Mbps Uplink bandwidth
 data_rate_Mi = 40  # in Mbps ###Downlink bandwidth
-speedtime = 5 # Ratio of distance b/w cloud and edge to distance b/w edge to next edge
+speedtime = 20 # Ratio of distance b/w cloud and edge to distance b/w edge to next edge
 mod = 2 # number of edges
-C = 70 # maximum cache size
+C = 90 # maximum cache size
+pub_Cache_part = 1  # ratio of private ratio to public cache
+priv_Cache_part = 3  # ratio of private ratio to public cache
 
 SIZEFACTOR = 1073741824 #2^30
 # SIZEFACTOR = 10000000 #10^7
@@ -69,13 +71,24 @@ max_requests = [0]  * mod
 data_size = [0]  * mod
 
 
+priv_total_latency = [0]  * mod
+priv_total_hits = [0]  * mod
+priv_total_download_cost = [0]  * mod
+priv_total_queries = [0]  * mod
+
+pub_total_latency = [0]  * mod
+pub_total_hits = [0]  * mod
+pub_total_download_cost = [0]  * mod
+pub_total_queries = [0]  * mod
+
 
 ##########################################################################################
 
 
 
 for i in range(0, mod):
-    fname = f"Google{i+1}-median.csv"
+    # fname = f"Google11-median.csv"
+    fname = f"Google{i+4}-median.csv"
     # fname = f"1.1.6-delayed.csv"
     
     with open(fname, 'r') as file:
@@ -226,6 +239,7 @@ def GETPENALTY(ExecutableID, SubmitTime,  flag, edge, queue):
             # Check if the current request's ExecutableID matches the one we're calculating for
                 if ExecutableID == queue[i]:
                     Li += pubq_time_for_executables[edge][ExecutableID]  #Add the time until the current request
+
                 
                 if temp_submit_time == float(SubmitTime):
                     break #NEWxxxxxxxxxxxxxxxxxxxxxv
@@ -254,7 +268,7 @@ def PREPARETOCACHE(cache,ExecutableID, edge,queue,flag):
         
 
     # exec_cost_local = Glob[ExecutableID_list.index(ExecutableID)]
-    LLCA(cache, exec_cost_local, ExecutableID, resources_d)
+    LLCA(cache, flag, exec_cost_local, ExecutableID, resources_d)
     
     
     
@@ -548,8 +562,7 @@ def HANDLE_SERVICE_REQUEST(edge, queue, flag, cache, name):
                 
                          
                 if latency_buffer:
-                    try:
-                        
+                    try:                      
                       # Extract the numeric value from the string
                         latency_buffer_value = float(latency_buffer.split(":")[1].strip())
                         total_latency += latency_buffer_value
@@ -558,8 +571,9 @@ def HANDLE_SERVICE_REQUEST(edge, queue, flag, cache, name):
                         total_latency += float(latency_buffer)
 
 
+                
                 #print the values in file
-                if flag == 'priv':   
+                if flag == 'priv': 
                     print(f"ExecutableID: {ExecutableID}, SubmitTime: {SubmitTime_list[edge][row_number]}, {latency_cloud}, {latency_buffer}, {latency_cache},Number of cache hits: {num_cache_hits},Total Latency: {total_latency},delayed_hit: {buffer_counter},forward_counter: {forward_counter},skipped_counter: {skipped_counter[edge]}, cost: {exec_cost_cache},cost_counter: {cost_counter}, {latency_edge}, {latency_edge_row} ", file=file)
                    
                 elif flag == 'pub':   
@@ -605,6 +619,18 @@ def HANDLE_SERVICE_REQUEST(edge, queue, flag, cache, name):
         
                 elif flag == 'pub':
                     SubmitTime  = pubq_SubmitTime_list[edge][row_number]
+                    
+        if flag == 'priv':
+            priv_total_latency[edge]  = total_latency
+            priv_total_hits[edge]  = num_cache_hits + buffer_counter
+            priv_total_download_cost[edge]  =  cost_counter
+            priv_total_queries[edge] = total_entries
+            
+        else:
+            pub_total_latency[edge]  = total_latency
+            pub_total_hits[edge]  = num_cache_hits + buffer_counter
+            pub_total_download_cost[edge]  =  cost_counter
+            pub_total_queries[edge] = total_entries
 
             
             
@@ -613,11 +639,19 @@ def HANDLE_SERVICE_REQUEST(edge, queue, flag, cache, name):
 
 
 # managing cache using landlord
-def LLCA(cache, temp, ExecutableIDlocal,resources_dict):
+def LLCA(cache, flag , temp, ExecutableIDlocal,resources_dict):
     cpu = resources_dict[ExecutableIDlocal][0]
     mem = resources_dict[ExecutableIDlocal][1]
     disk = resources_dict[ExecutableIDlocal][2]
-    Landlord(cache, C, ExecutableIDlocal,cpu,mem,disk,temp) 
+    
+    if flag =='priv':
+        ratio = C * priv_Cache_part / (priv_Cache_part+ pub_Cache_part)
+        Landlord(cache, ratio, ExecutableIDlocal,cpu,mem,disk,temp) 
+     
+    else:
+        ratio = C * pub_Cache_part / (priv_Cache_part+ pub_Cache_part)
+        Landlord(cache, ratio, ExecutableIDlocal,cpu,mem,disk,temp)
+    
 
 
 
@@ -648,6 +682,35 @@ for thread in threads:
     thread.join()
 
  
+###########################################################################################
+
+
+with open(f'relay_data.txt', 'w') as file:
+    sum_latency = 0.0
+    sum_hits = 0
+    sum_download_cost = 0.0
+    for edge in range(0, mod):
+        file.write(f"Private queue of edge {edge}\n")
+        file.write(f"Total latency: {priv_total_latency[edge]}\n")
+        file.write(f"Total Cost: {priv_total_download_cost[edge]}\n")
+        file.write(f"Total Hits: {priv_total_hits[edge]}\n")
+        file.write(f"Total Queries: {priv_total_queries[edge]}\n\n")
+        sum_download_cost += priv_total_download_cost[edge]
+        sum_hits += priv_total_hits[edge]
+        sum_latency += priv_total_latency[edge]
+        
+        file.write(f"Public queue of edge {edge}\n")
+        file.write(f"Total latency: {pub_total_latency[edge]}\n")
+        file.write(f"Total Cost: {pub_total_download_cost[edge]}\n")
+        file.write(f"Total Hits: {pub_total_hits[edge]}\n")
+        file.write(f"Total Queries: {pub_total_queries[edge]}\n\n")
+        sum_download_cost += pub_total_download_cost[edge]
+        sum_hits += pub_total_hits[edge]
+        sum_latency += pub_total_latency[edge]
+
+    file.write(f"\nSum of Total latency: {sum_latency}\n")
+    file.write(f"Sum of Total Cost: {sum_download_cost}\n")
+    file.write(f"Sum of Total Hits: {sum_hits}\n")
  
 #######################################################################################
       
@@ -670,15 +733,15 @@ for thread in threads:
 
 
 
-#printing public and private queue for each edge   
-for i in range(mod):
-    with open(f'pub_q{i+1}.txt', 'w') as file:
-        for item in pub_q[i]:
-            file.write(f"{item}\n")
+# #printing public and private queue for each edge   
+# for i in range(mod):
+#     with open(f'pub_q{i+1}.txt', 'w') as file:
+#         for item in pub_q[i]:
+#             file.write(f"{item}\n")
     
-    with open(f'priv_q{i+1}.txt', 'w') as file:
-        for item in priv_q[i]:
-            file.write(f"{item}\n")
+#     with open(f'priv_q{i+1}.txt', 'w') as file:
+#         for item in priv_q[i]:
+#             file.write(f"{item}\n")
    
     
     
